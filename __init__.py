@@ -40,9 +40,6 @@ if bpy.app.version < (2,80,0):
 else:
     isLegacy = False 
 
-def Set_Active_ShapeKey (name):
-    Get_Active_Object().active_shape_key_index = Get_Active_Object().data.shape_keys.key_blocks.keys().index(name)
-
 def Select_Object (obj, value):
     if isLegacy:
         obj.select = value
