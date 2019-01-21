@@ -22,7 +22,7 @@ bl_info = {
     "name": "Apply Modifier",
     "author": "mate.sus304",
     "version": (1, 0),
-    "blender": (2, 72, 0),
+    "blender": (2, 80, 0),
     "location": "View3D > Object > Apply",
     "description": "Apply All Modifier to Mesh Object",
     "warning": "",
@@ -35,8 +35,34 @@ bl_info = {
 import bpy
 
 ######################################################
+if bpy.app.version < (2,80,0):
+    isLegacy = True
+else:
+    isLegacy = False 
+
+def Set_Active_ShapeKey (name):
+    Get_Active_Object().active_shape_key_index = Get_Active_Object().data.shape_keys.key_blocks.keys().index(name)
+
+def Select_Object (obj, value):
+    if isLegacy:
+        obj.select = value
+    else:
+        obj.select_set(value)
+
+def Get_Active_Object ():
+    if isLegacy: 
+        return bpy.context.scene.objects.active
+    else:
+        return bpy.context.window.view_layer.objects.active
+
+def Set_Active_Object (obj):
+    if isLegacy: 
+        bpy.context.scene.objects.active = obj
+    else:
+        bpy.context.window.view_layer.objects.active = obj
+
 def Clear_Shape_Keys(Name):
-    obj = bpy.context.active_object
+    obj = Get_Active_Object()
     if obj.data.shape_keys == None:
         return True
     
@@ -57,7 +83,10 @@ def Clone_Object(Obj):
     tmp_obj.name = "applymodifier_tmp_%s"%(Obj.name)
     tmp_obj.data = tmp_obj.data.copy()
     tmp_obj.data.name = "applymodifier_tmp_%s"%(Obj.data.name)
-    bpy.context.scene.objects.link(tmp_obj)
+    if isLegacy:
+        bpy.context.scene.objects.link(tmp_obj)
+    else:
+        bpy.context.scene.collection.objects.link(tmp_obj)
     return tmp_obj
 
 def Delete_Object(Obj):
@@ -65,7 +94,10 @@ def Delete_Object(Obj):
         Obj.data.user_clear()
     for scn in bpy.data.scenes:
         try:
-            bpy.context.scene.objects.unlink(Obj)
+            if isLegacy:
+                bpy.context.scene.objects.unlink(Obj)
+            else:
+                bpy.context.scene.collection.objects.unlink(Obj)
         except:
             pass
 
@@ -73,7 +105,7 @@ def Delete_Object(Obj):
 
 def Func_Apply_Modifier(self, context, target_object = None, target_modifiers = None):
     if target_object == None:
-        obj_src = bpy.context.active_object
+        obj_src = Get_Active_Object()
     else:
         obj_src = target_object
     
@@ -96,7 +128,7 @@ def Func_Apply_Modifier(self, context, target_object = None, target_modifiers = 
     
     obj_fin = Clone_Object(obj_src)
     
-    bpy.context.scene.objects.active = obj_fin
+    Set_Active_Object(obj_fin)
     Clear_Shape_Keys('Basis')
     
     if target_modifiers == None:
@@ -118,7 +150,7 @@ def Func_Apply_Modifier(self, context, target_object = None, target_modifiers = 
         tmp_name = obj_src.data.shape_keys.key_blocks[i].name
         obj_tmp = Clone_Object(obj_src)
         
-        bpy.context.scene.objects.active = obj_tmp
+        Set_Active_Object(obj_tmp)
         Clear_Shape_Keys(tmp_name)
         
         for x in target_modifiers:
@@ -127,8 +159,8 @@ def Func_Apply_Modifier(self, context, target_object = None, target_modifiers = 
             except RuntimeError:
                 pass
         
-        obj_tmp.select = True
-        bpy.context.scene.objects.active = obj_fin
+        Select_Object(obj_tmp, True)
+        Set_Active_Object(obj_fin)
         try:
             bpy.ops.object.join_shapes()
             obj_fin.data.shape_keys.key_blocks[-1].name = tmp_name
@@ -161,11 +193,11 @@ def Func_Apply_Modifier(self, context, target_object = None, target_modifiers = 
         obj_src.modifiers.remove(obj_src.modifiers[x])
             
     Delete_Object(obj_fin)
-    bpy.context.scene.objects.active = obj_src
+    Set_Active_Object(obj_src)
     #obj_src.select = False
     #obj_src.location[0] += -1
 
-class OBJECT_apply_all_modifier(bpy.types.Operator):
+class OBJECT_OT_apply_all_modifier(bpy.types.Operator):
     """Apply All Modifier to Selected Mesh Object"""
     bl_idname = "object.apply_all_modifier"
     bl_label = "Apply_All_Modifier"
@@ -182,13 +214,13 @@ class OBJECT_apply_all_modifier(bpy.types.Operator):
             Func_Apply_Modifier(self, context, target_object = bpy.data.objects[x])
         
         for x in targets:
-            bpy.data.objects[x].select = True
+            Select_Object(bpy.data.objects[x], True)
         
         return {'FINISHED'}
     
 
 
-class OBJECT_apply_selected_modifier(bpy.types.Operator):
+class OBJECT_OT_apply_selected_modifier(bpy.types.Operator):
     """Apply Selected Modifier to Active Mesh Object"""
     bl_idname = "object.apply_selected_modifier"
     bl_label = "Apply_Selected_Modifier"
@@ -204,8 +236,8 @@ class OBJECT_apply_selected_modifier(bpy.types.Operator):
         return obj and obj.type == 'MESH'
     
     def execute(self, context):
-        obj = context.object
-        objname = context.object.name
+        obj = Get_Active_Object()
+        objname = obj.name
         bpy.ops.object.select_all(action='DESELECT')
         
         str_targets = []
@@ -215,7 +247,7 @@ class OBJECT_apply_selected_modifier(bpy.types.Operator):
         
         Func_Apply_Modifier(self, context, target_object = bpy.data.objects[objname], target_modifiers = str_targets)
         
-        obj.select = True
+        Select_Object(obj, True)
         return {'FINISHED'}
     
     def invoke(self, context, event):
@@ -238,24 +270,24 @@ class OBJECT_apply_selected_modifier(bpy.types.Operator):
 
 def apply_all_modifier_button(self, context):
     self.layout.operator(
-        OBJECT_apply_all_modifier.bl_idname,
+        OBJECT_OT_apply_all_modifier.bl_idname,
         text="Apply All Modifier")
 
 def apply_selected_modifier_button(self, context):
     self.layout.operator(
-        OBJECT_apply_selected_modifier.bl_idname,
+        OBJECT_OT_apply_selected_modifier.bl_idname,
         text="Apply Selected Modifier")
 
 def register():
-    bpy.utils.register_class(OBJECT_apply_all_modifier)
-    bpy.utils.register_class(OBJECT_apply_selected_modifier)
+    bpy.utils.register_class(OBJECT_OT_apply_all_modifier)
+    bpy.utils.register_class(OBJECT_OT_apply_selected_modifier)
     bpy.types.VIEW3D_MT_object_apply.append(apply_all_modifier_button)
     bpy.types.VIEW3D_MT_object_apply.append(apply_selected_modifier_button)
 
 
 def unregister():
-    bpy.utils.unregister_class(OBJECT_apply_all_modifier)
-    bpy.utils.unregister_class(OBJECT_apply_selected_modifier)
+    bpy.utils.unregister_class(OBJECT_OT_apply_all_modifier)
+    bpy.utils.unregister_class(OBJECT_OT_apply_selected_modifier)
     bpy.types.VIEW3D_MT_object_apply.remove(apply_all_modifier_button)
     bpy.types.VIEW3D_MT_object_apply.remove(apply_selected_modifier_button)
 
