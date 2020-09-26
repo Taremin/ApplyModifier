@@ -109,10 +109,11 @@ def apply_modifier(target_object=None, target_modifiers=None):
     if obj_src.data.shape_keys is None:
         #if object has no shapekeys, just apply modifier
         for x in obj_src.modifiers:
-            try:
-                bpy.ops.object.modifier_apply(modifier=x.name)
-            except RuntimeError:
-                pass
+            if target_modifiers is None or x.name in target_modifiers:
+                try:
+                    bpy.ops.object.modifier_apply(modifier=x.name)
+                except RuntimeError:
+                    pass
         return True
     
     obj_fin = clone_object(obj_src)
