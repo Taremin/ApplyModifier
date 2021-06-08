@@ -212,7 +212,7 @@ class OBJECT_OT_apply_selected_modifier(bpy.types.Operator):
     bl_label = "Apply_Selected_Modifier"
     bl_options = {'REGISTER', 'UNDO'}
     
-    bv = bpy.props.BoolVectorProperty(name="Booleans", description="test value", size=32)
+    bv: bpy.props.BoolVectorProperty(name="Booleans", description="test value", size=32)
     
     mod_count = 0
     
