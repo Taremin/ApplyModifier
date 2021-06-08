@@ -23,7 +23,7 @@ import bpy
 bl_info = {
     "name": "Apply Modifier",
     "author": "mate.sus304",
-    "version": (1, 1),
+    "version": (1, 2),
     "blender": (2, 80, 0),
     "location": "View3D > Object > Apply",
     "description": "Apply All Modifier to Mesh Object",
