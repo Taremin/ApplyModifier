@@ -152,6 +152,9 @@ def apply_modifier(target_object=None, target_modifiers=None):
         select_object(obj_tmp, True)
         set_active_object(obj_fin)
         try:
+            if len(obj_fin.data.vertices) != len(obj_tmp.data.vertices):
+                print(f"Vertex Count Disagreement in ShapeKey[{tmp_name}]")
+                raise ValueError("Vertex Count Disagreement!")
             bpy.ops.object.join_shapes()
             obj_fin.data.shape_keys.key_blocks[-1].name = tmp_name
         except:
@@ -162,13 +165,11 @@ def apply_modifier(target_object=None, target_modifiers=None):
     
     if flag_on_error:
         def draw(self, context):
-            self.layout.label("Vertex Count Disagreement! Some shapekeys skipped.")
+            self.layout.label(text="Vertex Count Disagreement! Some shapekeys skipped.")
             for s in list_skipped:
-                self.layout.label(s)
+                self.layout.label(text=s)
 
         bpy.context.window_manager.popup_menu(draw, title="Error", icon='INFO')
-        
-        return False
         
     tmp_name = obj_src.name
     tmp_data_name = obj_src.data.name
